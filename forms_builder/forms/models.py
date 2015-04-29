@@ -84,6 +84,8 @@ class AbstractForm(models.Model):
         max_length=200)
     email_subject = models.CharField(_("Subject"), max_length=200, blank=True)
     email_message = models.TextField(_("Message"), blank=True)
+    captcha_required = models.BooleanField(_("Captcha required"), default=False,
+        help_text=_("If checked, a captcha must be completed to submit the form"))
 
     objects = FormManager()
 
