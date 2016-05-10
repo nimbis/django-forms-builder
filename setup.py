@@ -49,8 +49,8 @@ try:
             "sphinx-me >= 0.1.2",
             "unidecode",
             "django-email-extras >= 0.2",
-            "django >= 1.6.10, < 1.8",
-            "future == 0.9.0",
+            "django >= 1.6.10, < 1.10",
+            "future <= 0.15.0",
         ],
         classifiers = [
             "Development Status :: 5 - Production/Stable",
