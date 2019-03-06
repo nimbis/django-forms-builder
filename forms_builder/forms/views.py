@@ -4,8 +4,12 @@ import json
 
 from django.conf import settings
 from django.contrib.auth import REDIRECT_FIELD_NAME
-from django.core.urlresolvers import reverse
-from django.http import HttpResponse
+try:
+    from django.urls import reverse
+except ImportError:
+    # For Django 1.8 compatibility
+    from django.core.urlresolvers import reverse
+from django.http import HttpResponse, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, redirect, render_to_response
 from django.template import RequestContext
 from django.utils.http import urlquote
@@ -32,7 +36,7 @@ class FormDetail(TemplateView):
     def get(self, request, *args, **kwargs):
         context = self.get_context_data(**kwargs)
         login_required = context["form"].login_required
-        if login_required and not request.user.is_authenticated():
+        if login_required and not request.user.is_authenticated:
             path = urlquote(request.get_full_path())
             bits = (settings.LOGIN_URL, REDIRECT_FIELD_NAME, path)
             return redirect("%s?%s=%s" % bits)
@@ -69,6 +73,9 @@ class FormDetail(TemplateView):
                 "form": context["form_for_form"].as_p(),
                 "message": context["form"].response,
             })
+            if context["form_for_form"].errors:
+                return HttpResponseBadRequest(json_context,
+                    content_type="application/json")
             return HttpResponse(json_context, content_type="application/json")
         return super(FormDetail, self).render_to_response(context, **kwargs)
 

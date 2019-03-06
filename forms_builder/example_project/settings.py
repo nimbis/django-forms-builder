@@ -29,18 +29,37 @@ DATABASES = {
     }
 }
 
-TEMPLATE_LOADERS = (
-    'django.template.loaders.filesystem.Loader',
-    'django.template.loaders.app_directories.Loader',
-)
+TEMPLATES = [
+    {
+        'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        'DIRS': [
+            os.path.join(PROJECT_ROOT, "templates")
+        ],
+        'APP_DIRS': True,
+        'OPTIONS': {
+            'context_processors': [
+                'django.contrib.auth.context_processors.auth',
+                'django.template.context_processors.debug',
+                'django.template.context_processors.request',
+                'django.template.context_processors.i18n',
+                'django.template.context_processors.media',
+                'django.template.context_processors.static',
+                'django.template.context_processors.tz',
+                'django.contrib.messages.context_processors.messages',
+            ],
+        },
+    },
+]
 
-MIDDLEWARE_CLASSES = (
+MIDDLEWARE = (
     'django.middleware.common.CommonMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
 )
+# For Django 1.8 compatibility
+MIDDLEWARE_CLASSES = MIDDLEWARE
 
 TEMPLATE_CONTEXT_PROCESSORS = (
     "django.contrib.auth.context_processors.auth",
@@ -61,15 +80,6 @@ INSTALLED_APPS = (
     'django.contrib.staticfiles',
     'forms_builder.forms',
 )
-
-from django import VERSION
-if VERSION < (1, 7):
-    try:
-        import south
-    except ImportError:
-        pass
-    else:
-        INSTALLED_APPS += ("south",)
 
 FORMS_BUILDER_EXTRA_FIELDS = (
     (100, "django.forms.BooleanField", "My cool checkbox"),

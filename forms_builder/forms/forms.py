@@ -7,9 +7,17 @@ from uuid import uuid4
 
 import django
 from django import forms
-from django.forms.extras import SelectDateWidget
-from django.core.files.storage import FileSystemStorage
-from django.core.urlresolvers import reverse
+try:
+    from django.forms import SelectDateWidget
+except ImportError:
+    # For Django 1.8 compatibility
+    from django.forms.extras import SelectDateWidget
+from django.core.files.storage import default_storage
+try:
+    from django.urls import reverse
+except ImportError:
+    # For Django 1.8 compatibility
+    from django.core.urlresolvers import reverse
 from django.template import Template
 from django.utils.safestring import mark_safe
 from django.utils.translation import ugettext_lazy as _
@@ -20,7 +28,10 @@ from forms_builder.forms import settings
 from forms_builder.forms.utils import now, split_choices
 
 
-fs = FileSystemStorage(location=settings.UPLOAD_ROOT)
+fs = default_storage
+if settings.UPLOAD_ROOT is not None:
+    fs = default_storage.__class__(location=settings.UPLOAD_ROOT)
+
 
 ##############################
 # Each type of export filter #
@@ -148,9 +159,12 @@ class FormForForm(forms.ModelForm):
                 field_args["max_length"] = settings.FIELD_MAX_LENGTH
             if "choices" in arg_names:
                 choices = list(field.get_choices())
-                if (field.field_type == fields.SELECT and
-                        field.default not in [c[0] for c in choices]):
-                    choices.insert(0, ("", field.placeholder_text))
+                if field.field_type == fields.SELECT and not (field.required and field.default):
+                    # The first OPTION with attr. value="" display only if...
+                    #   1. ...the field is not required.
+                    #   2. ...the field is required and the default is not set.
+                    text = "" if field.placeholder_text is None else field.placeholder_text
+                    choices.insert(0, ("", text))
                 field_args["choices"] = choices
             if field_widget is not None:
                 field_args["widget"] = field_widget
@@ -188,13 +202,20 @@ class FormForForm(forms.ModelForm):
 
             # Add identifying CSS classes to the field.
             css_class = field_class.__name__.lower()
-            if field.required:
+            # Do not add the 'required' field to the CheckboxSelectMultiple because it will 
+            # mean that all checkboxes have to be checked instead of the usual use case of
+            # "at least one".  
+            if field.required and (field_widget != forms.CheckboxSelectMultiple):
                 css_class += " required"
-                if (settings.USE_HTML5 and
-                    field.field_type != fields.CHECKBOX_MULTIPLE):
-                    self.fields[field_key].widget.attrs["required"] = ""
+                if settings.USE_HTML5:
+                    # Except Django version 1.10 this is necessary for all versions from 1.8 to 1.11.
+                    self.fields[field_key].widget.attrs["required"] = "required"
+
             self.fields[field_key].widget.attrs["class"] = css_class
-            if field.placeholder_text and not field.default:
+            if field.placeholder_text and not field.default and field.field_type != fields.SELECT:
+                # Attribute `placeholder` not allowed on element `select` at this point.
+                # See https://developer.mozilla.org/en-US/docs/Web/HTML/Element/select
+                # or check the code in https://validator.w3.org.
                 text = field.placeholder_text
                 self.fields[field_key].widget.attrs["placeholder"] = text
 
